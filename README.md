@@ -1,62 +1,41 @@
 # discord-badge-spoofer
 
-inflates your discord profile badges - add hours played and mark games as played.
+Inflates the playtime and games-played stats on your Discord profile.
 
-## join https://discord.gg/solasity for support
+## How to run
 
-**how it works:** discord's analytics endpoint (`/api/v9/science`) tracks what games you play and how long you play them. this tool posts the same events the real client does (`launch_game` and `running_game_heartbeat`), but with custom hours and game lists. discord accepts the events (`204`) and they do show up in your badges.
+Requires Python 3.10+. No dependencies (stdlib only).
 
-**status:** verified working and currently unpatched. badges take 1-2 days to update, so don't expect results right away. your token and cookie are stored locally only - nothing leaves your machine. this may break at any time if discord patches the endpoint.
-
-**important:** this violates discord's tos. use it on accounts you're comfortable losing.
-
-## setup
-
-no dependencies - pure python stdlib (needs python 3.10+).
-
-1. run it:
-   ```
-   python spoofer.py
-   ```
-
-2. first run asks for your discord account token. paste it and it gets saved to `science_state.json` (reused after that). the analytics token is fetched automatically from `GET /users/@me?with_analytics_token=true`.
-
-3. you also need a cookie (`cf_clearance`). on startup it'll ask for one, or you can add/update it later via option `3` (refresh auth). grab the full `cookie` header from any `/science` request in devtools (network tab). it gets saved to `science_state.json`.
-
-5. **optional: fingerprint for games-played count.** the fingerprint isn't strictly necessary - users have reported getting the games-played badge without setting one. if you want to set it, grab a real `executable_fingerprint` from a `launch_game` request in your client's devtools and add it to `science_state.json` as `"fingerprint": "..."`.
-
-## menu
-
-- `1` claim playtime - asks for hours per game, applies to every game
-- `2` games played - marks every game as played (1 minute each)
-- `3` refresh auth - pulls a fresh analytics token and lets you update the cookie
-- `4` exit
-
-## how auth works
-
-- `token` - your account token, entered on first run, saved to `science_state.json`
-- `analytics_token` - fetched from `GET /users/@me?with_analytics_token=true`
-- `super_props` / heartbeat / launch ids - generated automatically
-- `cookie` (cf_clearance) - pasted by hand, via option `3`
-- `fingerprint` - optional, only needed for the games-played count (see below)
-
-badges update on discord's analytics cycle (1-2 days), so don't expect to see results right away.
-
-## about the fingerprint
-
-hours work with just your token and cookie. the games-played count might need a real `executable_fingerprint` - we're not 100% sure yet. users have reported getting badges without one, so try it first. if it doesn't work after a few days, grab a real `executable_fingerprint` from a `launch_game` request in your client's devtools and add it to `science_state.json`:
-
-```json
-{ "fingerprint": "Ab5ekw..." }
+```
+python spoofer.py
 ```
 
-either way, the tool will post the events - we just want feedback on whether the badges move with or without the fingerprint so we can figure out what's actually required.
+1. Paste your Discord account token when asked. It is saved to `science_state.json`.
+2. Paste your `cookie` header (needs `cf_clearance`). Copy it from any `/science` request in the client's devtools (Network tab).
+3. Pick an option from the menu:
+   - `1` claim games: choose how many games and how many hours per game
+   - `2` refresh auth: fetch a new analytics token and update the cookie
+   - `3` set fingerprint (optional, Windows only): generate an `executable_fingerprint` from a game's `.exe` or PID
+   - `4` exit
 
-## disclaimer
+Badges update on Discord's analytics cycle, which takes 1-2 days.
 
-this breaks discord's terms of service. use it on accounts you're fine losing.
-provided as-is with no warranty.
+## How it works
 
-## license
+The Discord client reports game activity to `/api/v9/science` using `launch_game` and `running_game_heartbeat` events. This script sends the same events with whatever games and durations you choose. `duration_tracked_ms` is not validated, so Discord accepts the values (`204`).
 
-released under the mit license. see [LICENSE](LICENSE).
+- The analytics token comes from `GET /users/@me?with_analytics_token=true` and is cached for 12h.
+- Client properties come from `cordapi.dolfi.es`, with a local fallback.
+- The game list is downloaded from Discord's CDN (`detectables/games.json`).
+- Events go out in batches of 50, one batch per second.
+
+## Risks
+
+- **This violates Discord's Terms of Service.** Your account can be flagged or banned. Only use an account you are willing to lose.
+- **Your token gives full access to your account.** It is stored in plain text in `science_state.json`. Keep that file private and never share it.
+- It can stop working at any time if Discord patches the endpoint.
+- Provided as-is, with no warranty.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
